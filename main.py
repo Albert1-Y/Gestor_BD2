@@ -1,23 +1,26 @@
-# Menú principal.
+import sys
+from PyQt6.QtWidgets import QApplication
 
-# Pruebas y control de flujo (insertar, leer, mostrar estado).
-
-from disco.disco import Disco
-from registros.manejador_registros import ManejadorRegistros
-from memoria.arbol_avl import BinaryTree
+from disco.disco import DISCOLBA
+from interfaz.visualizador_disco import DiscoInterfaz
 
 def main():
-    # Crear disco
-    disco = Disco(num_platos=2, num_superficies=2, num_pistas=3, num_sectores=4)
+    app = QApplication(sys.argv)
 
-    # Crear AVL para memoria interna
-    memoria = BinaryTree()
+    # Crear disco con parámetros: 3 platos, 10 pistas, 8 sectores por pista, tamaño sector 64 bytes
+    disco = DISCOLBA(platos=3, pistas=10, sectores=8, tamano_sector=64)
 
-    # Manejador de registros
-    manejador = ManejadorRegistros(disco, memoria)
+    # Insertar registros de prueba
+    disco.guardar_dato("Este es el registro número 101 almacenado en múltiples sectores.", "101")
+    disco.guardar_dato("Otro registro para probar fragmentación y visualización.", "202")
+    disco.guardar_dato("Registro corto.", "303")
 
-    # Aquí podrías construir un menú o pruebas simples
-    print("Simulador de Base de Datos iniciado.")
+    # Crear ventana pasando el disco
+    ventana = DiscoInterfaz(disco)
+    ventana.resize(1200, 800)
+    ventana.show()
+
+    sys.exit(app.exec())
 
 if __name__ == "__main__":
     main()

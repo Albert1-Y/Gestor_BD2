@@ -1,3 +1,5 @@
+# Versión extendida de DiscoInterfaz con búsqueda por campo usando AVL dinámico
+
 import os
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QComboBox, QSpinBox, QLineEdit,
@@ -6,26 +8,25 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtGui import QColor, QBrush, QPen, QPixmap
 from PyQt6.QtCore import Qt
+from memoria.arbol_avl import AVL
+from util.helpers import reconstruir_contenido, construir_avl_por_campo
 
 class DiscoInterfaz(QWidget):
     def __init__(self, disco):
         super().__init__()
         self.disco = disco
-
         self.setWindowTitle("Visualizador Disco BD con Búsqueda")
 
-        # Tomar dinámicamente parámetros desde disco
-        self.num_platos = self.disco.platos
-        self.superficies_por_plato = self.disco.superficies_por_plato
-        self.max_pistas_por_sup = self.disco.pistas
-        self.sectores_por_pista = self.disco.sectores_por_pista
+        self.num_platos = disco.platos
+        self.superficies_por_plato = disco.superficies_por_plato
+        self.max_pistas_por_sup = disco.pistas
+        self.sectores_por_pista = disco.sectores_por_pista
 
         layout = QVBoxLayout()
         top_layout = QHBoxLayout()
         self.scene = QGraphicsScene()
         self.view = QGraphicsView(self.scene)
 
-        # Selectores basados en disco
         self.plato_combo = QComboBox()
         self.plato_combo.addItems([f"Plato {i}" for i in range(self.num_platos)])
         self.superficie_combo = QComboBox()
@@ -40,9 +41,24 @@ class DiscoInterfaz(QWidget):
         self.boton_mostrar.clicked.connect(self.mostrar_diagrama)
 
         self.input_busqueda = QLineEdit()
-        self.input_busqueda.setPlaceholderText("ID del registro")
+        self.input_busqueda.setPlaceholderText("Valor a buscar")
+
         self.boton_buscar = QPushButton("Buscar")
         self.boton_buscar.clicked.connect(self.buscar_registro)
+
+        self.combo_campo = QComboBox()
+        self.combo_campo = QComboBox()
+        if disco.indice_registros:
+            ejemplo_id = next(iter(disco.indice_registros))
+            campos = disco.indice_registros[ejemplo_id]["campos"]
+            campos_nombres = disco.nombres_campos
+            opciones = [
+                f"{campos_nombres[i]} ({tipo})" if i < len(campos_nombres) else f"Campo {i} ({tipo})"
+                for i, (tipo, _) in enumerate(campos)
+            ]
+            self.combo_campo.addItems(opciones)
+        else:
+            self.combo_campo.addItem("Ningún campo disponible")
 
         top_layout.addWidget(QLabel("Plato:"))
         top_layout.addWidget(self.plato_combo)
@@ -53,7 +69,8 @@ class DiscoInterfaz(QWidget):
         top_layout.addWidget(QLabel("Cantidad:"))
         top_layout.addWidget(self.pistas_a_mostrar)
         top_layout.addWidget(self.boton_mostrar)
-        top_layout.addWidget(QLabel("Buscar ID:"))
+        top_layout.addWidget(QLabel("Buscar por:"))
+        top_layout.addWidget(self.combo_campo)
         top_layout.addWidget(self.input_busqueda)
         top_layout.addWidget(self.boton_buscar)
 
@@ -62,7 +79,6 @@ class DiscoInterfaz(QWidget):
         self.setLayout(layout)
 
         self.registro_encontrado = None
-
         self.mostrar_diagrama()
 
     def mostrar_diagrama(self):
@@ -75,8 +91,6 @@ class DiscoInterfaz(QWidget):
 
         cx, cy = 100, 200
         spacing_y = 100
-
-        # Ruta absoluta a la imagen plato_cd.png en la carpeta actual del archivo
         ruta_imagen = os.path.join(os.path.dirname(__file__), "plato_cd.png")
         pixmap = QPixmap(ruta_imagen)
         if not pixmap.isNull():
@@ -103,17 +117,12 @@ class DiscoInterfaz(QWidget):
 
             for sec in range(self.sectores_por_pista):
                 x_sec = base_x + 80 + sec * 30
-
-                ocupado = False
-                color = QColor("lightgreen")
-
-                lba = plato * sectores_por_plato + superficie * (self.disco.pistas * self.disco.sectores_por_pista) + p * self.disco.sectores_por_pista + sec
+                lba = plato * sectores_por_plato + superficie * self.disco.pistas * self.disco.sectores_por_pista + p * self.disco.sectores_por_pista + sec
                 sector_obj = self.disco.sectores[lba]
 
-                if sector_obj.ocupado:
-                    ocupado = True
+                color = QColor("lightgreen")
+                if sector_obj.campos:
                     color = QColor("orange")
-
                 if self.registro_encontrado:
                     for (ubi_lba, _, _) in self.registro_encontrado.get("ubicaciones", []):
                         if ubi_lba == lba:
@@ -131,22 +140,38 @@ class DiscoInterfaz(QWidget):
                 self.scene.addItem(flecha)
 
     def buscar_registro(self):
-        reg_id = self.input_busqueda.text().strip()
-        if not reg_id:
-            QMessageBox.warning(self, "No ID", "Ingrese un ID para buscar.")
+        valor = self.input_busqueda.text().strip()
+        if not valor:
+            QMessageBox.warning(self, "Entrada vacía", "Ingrese un valor a buscar.")
             return
 
-        registro = self.disco.obtener_registro_formateado(reg_id)
-        if registro is None:
-            QMessageBox.warning(self, "No encontrado", f"Registro con ID {reg_id} no existe.")
+        campo_idx = self.combo_campo.currentIndex()
+        tipos = ['int', 'string', 'int']
+        campo_tipo = tipos[campo_idx]
+
+        avl = construir_avl_por_campo(self.disco, campo_tipo, campo_idx)
+        resultado = avl.buscar(valor)
+
+        if not resultado:
+            QMessageBox.information(self, "No encontrado", f"No se encontró ningún registro con valor '{valor}'.")
             self.registro_encontrado = None
         else:
-            self.registro_encontrado = registro[reg_id]
-            info = f"Registro {reg_id}:\nContenido:\n{self.registro_encontrado['contenido']}\n\nUbicaciones:\n"
-            for (lba, ini, fin) in self.registro_encontrado["ubicaciones"]:
-                plato, sup, pista, sector = self.disco._lba_a_pps(lba)
-                info += f"  Plato {plato}, Superficie {sup}, Pista {pista}, Sector {sector} (bytes {ini}-{fin})\n"
+            contenido = reconstruir_contenido(sorted(resultado["fragmentos"], key=lambda f: (f[0], f[1], f[2], f[3], f[4])), self.disco)
+            ubicaciones = []
+            for frag in sorted(resultado["fragmentos"], key=lambda f: (f[0], f[1], f[2], f[3], f[4])):
+                lba = self.disco._pps_a_lba(*frag[:4])
+                ubicaciones.append((lba, frag[4], frag[5]))
 
-            QMessageBox.information(self, f"Registro {reg_id}", info)
+            self.registro_encontrado = {
+                "contenido": contenido,
+                "ubicaciones": ubicaciones
+            }
+
+            info = f"Registro {resultado['registro_id']}:\nContenido:\n{contenido}\n\nUbicaciones:\n"
+            for (lba, ini, fin) in ubicaciones:
+                plato, sup, pista, sector = self.disco._lba_a_pps(lba)
+                info += f"  Plato {plato}, Sup {sup}, Pista {pista}, Sector {sector} (bytes {ini}-{fin})\n"
+
+            QMessageBox.information(self, f"Registro {resultado['registro_id']}", info)
 
         self.mostrar_diagrama()

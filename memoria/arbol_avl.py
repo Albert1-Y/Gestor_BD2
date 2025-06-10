@@ -1,122 +1,102 @@
-from .nodo_avl import TreeNode
-
-def getHeight(nodo):
-    if nodo == None :
-        return 0
-    return nodo.altura
-
-def maximo(a, b):
-    return a if a > b else b
-
-def RT_izq(A):
-    x = A.right
-    t2 = x.left
-    
-    x.left = A
-    A.right = t2
-    
-    A.altura = maximo(getHeight(A.right), getHeight(A.left)) + 1
-    x.altura = maximo(getHeight(x.right), getHeight(x.left)) + 1
-    
-    A.estatus = getHeight(A.right) - getHeight(A.left)
-    x.estatus = getHeight(x.right) - getHeight(x.left)
-    
-    return x
-
-def RT_drc(A):
-    y = A.left
-    t2 = y.right
-    
-    y.right = A
-    A.left = t2
-    
-    A.altura = maximo(getHeight(A.right), getHeight(A.left)) + 1
-    y.altura = maximo(getHeight(y.right), getHeight(y.left)) + 1
-    
-    A.estatus = getHeight(A.right) - getHeight(A.left)
-    y.estatus = getHeight(y.right) - getHeight(y.left)
-    
-    return y
+class NodoAVL:
+    def __init__(self, clave, fragmentos):
+        self.clave = clave  # Campo por el cual se indexa (ej. ID)
+        self.fragmentos = fragmentos  # Lista de fragmentos [[plato, superficie, pista, sector, byte_inicio, byte_fin], ...]
+        self.izquierda = None
+        self.derecha = None
+        self.altura = 1
 
 
-class BinaryTree:
+class AVL:
     def __init__(self):
-        self.root = None
-        self.toggle = False
-        self.recorrido = []
+        self.raiz = None
 
-    def _find(self, v):
-        parent = None
-        current = self.root
-        while current and current.value != v:
-            next_node = current.left if v < current.value else current.right
-            if current:
-                self.recorrido.append((current, v < current.value))
-            parent = current
-            current = next_node
-        return parent, current
+    def insertar(self, clave, fragmentos):
+        if self.buscar(clave) is not None:
+            raise ValueError(f"La clave {clave} ya existe en el árbol")
+        self.raiz = self._insertar(self.raiz, clave, fragmentos)
 
-    def insert(self, v):
-        if self.root is None:
-            self.root = TreeNode(v)
-            return True
-        
-        self.recorrido.clear()
-        parent, node = self._find(v)
-        if node:
-            return False
+    def _insertar(self, nodo, clave, fragmentos):
+        if not nodo:
+            return NodoAVL(clave, fragmentos)
 
-        new_node = TreeNode(v)
-        
-        if v < parent.value:
-            parent.left = new_node
+        if clave < nodo.clave:
+            nodo.izquierda = self._insertar(nodo.izquierda, clave, fragmentos)
         else:
-            parent.right = new_node
-        
-        self.recorrido.append((parent, v < parent.value))
-        
-        for i in range( len(self.recorrido)-1, -1, -1):
-            n, _ = self.recorrido[i]
-            
-            n.altura = maximo( getHeight( n.left ), getHeight( n.right ) ) + 1
-            
-            n.estatus = getHeight(n.right) - getHeight(n.left)
-            
-            if n.estatus > 1 and v > n.right.value:
-                nuevo = RT_izq(n)
-            elif n.estatus < -1 and v > n.left.value:
-                nuevo = RT_drc(n)
-            elif n.estatus > 1 and v < n.right.value:
-                n.right = RT_drc(n.right)
-                nuevo = RT_izq(n)
-            elif n.estatus < -1 and v < n.left.value:
-                n.left = RT_izq(n.left)
-                nuevo = RT_drc(n)
-            else:
-                # rotacion no necesaria
-                continue
-            
-            if i == 0:
-                self.root = nuevo
-            else:
-                padre, es_izquierdo = self.recorrido[i-1]
-                if es_izquierdo:
-                    padre.left = nuevo
-                else:
-                    padre.right = nuevo
-                    
-        return True
-    
-    def find(self, value):
-        _, node = self._find(value)
-        return node is not None
+            nodo.derecha = self._insertar(nodo.derecha, clave, fragmentos)
 
-def imprimir_arbol (head, nivel = 0):
-    if head is None:
-        return
-    imprimir_arbol (head.right, nivel + 1)
-    for _ in range(nivel):
-        print("    ", end="")
-    print(head.value)
-    imprimir_arbol(head.left, nivel + 1)
+        nodo.altura = 1 + max(self._altura(nodo.izquierda),
+                            self._altura(nodo.derecha))
 
+        balance = self._balance(nodo)
+
+        # Rotaciones según el balance
+        if balance > 1 and clave < nodo.izquierda.clave:
+            return self._rotar_derecha(nodo)
+        if balance < -1 and clave > nodo.derecha.clave:
+            return self._rotar_izquierda(nodo)
+        if balance > 1 and clave > nodo.izquierda.clave:
+            nodo.izquierda = self._rotar_izquierda(nodo.izquierda)
+            return self._rotar_derecha(nodo)
+        if balance < -1 and clave < nodo.derecha.clave:
+            nodo.derecha = self._rotar_derecha(nodo.derecha)
+            return self._rotar_izquierda(nodo)
+
+        return nodo
+
+    def buscar(self, clave):
+        return self._buscar(self.raiz, clave)
+
+    def _buscar(self, nodo, clave):
+        if not nodo:
+            return None
+        if clave == nodo.clave:
+            return nodo.fragmentos
+        elif clave < nodo.clave:
+            return self._buscar(nodo.izquierda, clave)
+        else:
+            return self._buscar(nodo.derecha, clave)
+
+    def _altura(self, nodo):
+        if not nodo:
+            return 0
+        return nodo.altura
+
+    def _balance(self, nodo):
+        if not nodo:
+            return 0
+        return self._altura(nodo.izquierda) - self._altura(nodo.derecha)
+
+    def _rotar_derecha(self, z):
+        y = z.izquierda
+        T3 = y.derecha
+
+        y.derecha = z
+        z.izquierda = T3
+
+        z.altura = 1 + max(self._altura(z.izquierda), self._altura(z.derecha))
+        y.altura = 1 + max(self._altura(y.izquierda), self._altura(y.derecha))
+
+        return y
+
+    def _rotar_izquierda(self, z):
+        y = z.derecha
+        T2 = y.izquierda
+
+        y.izquierda = z
+        z.derecha = T2
+
+        z.altura = 1 + max(self._altura(z.izquierda), self._altura(z.derecha))
+        y.altura = 1 + max(self._altura(y.izquierda), self._altura(y.derecha))
+
+        return y
+
+    def in_order(self):
+        return self._in_order(self.raiz)
+
+    def _in_order(self, nodo):
+        if not nodo:
+            return []
+        return (self._in_order(nodo.izquierda) +
+                [(nodo.clave, nodo.fragmentos)] +
+                self._in_order(nodo.derecha))

@@ -26,17 +26,44 @@ def insertar_registro(disco, id_registro, valores):
 def construir_avl_por_campo(disco, campo_tipo, campo_orden):
     from memoria.arbol_avl import AVL
     avl = AVL()
+    
     for reg_id, datos in disco.indice_registros.items():
         campos = datos["campos"]
         fragmentos = datos["fragmentos"]
+        
         if campo_orden < len(campos):
             tipo, valor = campos[campo_orden]
+            
             if tipo == campo_tipo:
+                if isinstance(valor, str):
+                    if valor.isdigit():  # si la cadena es un numero entero
+                        valor = int(valor)
+                    else:
+                        try:
+                            # intentamos convertirlo a float
+                            valor = float(valor)
+                        except ValueError:
+                            pass
+                
+                elif isinstance(valor, (int, float)):  # numerica
+                    pass
+                elif isinstance(valor, str):
+                    pass
+                elif isinstance(valor, datetime):  # Si es fecha
+                    try:
+                        valor = datetime.strptime(valor, "%Y-%m-%d")  # de string a datetime
+                    except ValueError:
+                        pass
+                else:
+                    raise ValueError(f"Tipo de valor no soportado para comparación: {tipo}")
+                
+                # insertar en el AVL
                 avl.insertar(valor, {
                     "registro_id": reg_id,
                     "fragmentos": fragmentos
                 })
     return avl
+
 
 def reconstruir_contenido(fragmentos, disco):
     resultado = []

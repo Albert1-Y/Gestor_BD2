@@ -9,7 +9,8 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtGui import QColor, QBrush, QPen, QPixmap
 from PyQt6.QtCore import Qt
 from memoria.arbol_avl import AVL
-from util.helpers import reconstruir_contenido, construir_avl_por_campo
+from util.helpers import reconstruir_contenido, construir_avl_por_campo, inferir_tipo
+
 
 class DiscoInterfaz(QWidget):
     def __init__(self, disco):
@@ -140,7 +141,23 @@ class DiscoInterfaz(QWidget):
                 self.scene.addItem(flecha)
 
     def buscar_registro(self):
-        valor = self.input_busqueda.text().strip()
+        
+        valor_str = self.input_busqueda.text().strip()
+        try:
+            tipo_inferido = inferir_tipo(valor_str)
+            if tipo_inferido == "int":
+                valor = int(valor_str)
+            elif tipo_inferido == "float":
+                valor = float(valor_str)
+            elif tipo_inferido == "bool":
+                valor = valor_str.lower() == "true"
+            else:
+                valor = valor_str
+        except ValueError:
+            QMessageBox.warning(self, "Error de tipo", "No se pudo interpretar el valor ingresado.")
+            return
+
+        
         if not valor:
             QMessageBox.warning(self, "Entrada vacía", "Ingrese un valor a buscar.")
             return

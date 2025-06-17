@@ -11,7 +11,7 @@ def main():
 
     insertar_registro(disco, "101", ['101', 'Ricardo', 20])
     insertar_registro(disco, "102", ['102', 'Juanito', 30])
-    insertar_registro(disco, "103", ['103', 'Alvaro', 20])
+    insertar_registro(disco, "103", ['103', 'Alvaro', 21])
 
     ventana = DiscoInterfaz(disco)
     ventana.resize(1200, 800)

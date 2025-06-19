@@ -1,5 +1,3 @@
-# Versión extendida de DiscoInterfaz con búsqueda por campo usando AVL dinámico
-
 import os
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QComboBox, QSpinBox, QLineEdit,
@@ -139,10 +137,14 @@ class DiscoInterfaz(QWidget):
                 flecha = QGraphicsLineItem(cx + (pixmap.width() if not pixmap.isNull() else 200) / 2, cy, base_x, y)
                 flecha.setPen(QPen(Qt.GlobalColor.white, 2))
                 self.scene.addItem(flecha)
-
+                
     def buscar_registro(self):
-        
         valor_str = self.input_busqueda.text().strip()
+        if not valor_str:
+            QMessageBox.warning(self, "Entrada vacía", "Ingrese un valor a buscar.")
+            return
+
+        # Inferir tipo del valor ingresado
         try:
             tipo_inferido = inferir_tipo(valor_str)
             if tipo_inferido == "int":
@@ -157,38 +159,41 @@ class DiscoInterfaz(QWidget):
             QMessageBox.warning(self, "Error de tipo", "No se pudo interpretar el valor ingresado.")
             return
 
-        
-        if not valor:
-            QMessageBox.warning(self, "Entrada vacía", "Ingrese un valor a buscar.")
-            return
-
+        # Campo seleccionado
         campo_idx = self.combo_campo.currentIndex()
-        tipos = ['int', 'string', 'int']
-        campo_tipo = tipos[campo_idx]
+        texto = self.combo_campo.currentText()
+        campo_tipo = texto.split('(')[-1].strip(')')
 
+        # Construir AVL y buscar
         avl = construir_avl_por_campo(self.disco, campo_tipo, campo_idx)
-        resultado = avl.buscar(valor)
+        resultados = avl.buscar(valor)
 
-        if not resultado:
+        if not resultados:
             QMessageBox.information(self, "No encontrado", f"No se encontró ningún registro con valor '{valor}'.")
             self.registro_encontrado = None
-        else:
+            self.mostrar_diagrama()
+            return
+
+        mensajes = []
+        for resultado in resultados:
             contenido = reconstruir_contenido(sorted(resultado["fragmentos"], key=lambda f: (f[0], f[1], f[2], f[3], f[4])), self.disco)
             ubicaciones = []
-            for frag in sorted(resultado["fragmentos"], key=lambda f: (f[0], f[1], f[2], f[3], f[4])):
+            for frag in resultado["fragmentos"]:
                 lba = self.disco._pps_a_lba(*frag[:4])
                 ubicaciones.append((lba, frag[4], frag[5]))
 
-            self.registro_encontrado = {
-                "contenido": contenido,
-                "ubicaciones": ubicaciones
-            }
+            if not self.registro_encontrado:
+                self.registro_encontrado = {"contenido": "", "ubicaciones": []}
 
-            info = f"Registro {resultado['registro_id']}:\nContenido:\n{contenido}\n\nUbicaciones:\n"
+            self.registro_encontrado["ubicaciones"].extend(ubicaciones)
+
+
+            msg = f"Registro {resultado['registro_id']}:\nContenido:\n{contenido}\n\nUbicaciones:\n"
             for (lba, ini, fin) in ubicaciones:
                 plato, sup, pista, sector = self.disco._lba_a_pps(lba)
-                info += f"  Plato {plato}, Sup {sup}, Pista {pista}, Sector {sector} (bytes {ini}-{fin})\n"
+                msg += f"  Plato {plato}, Sup {sup}, Pista {pista}, Sector {sector} (bytes {ini}-{fin})\n"
+            mensajes.append(msg)
 
-            QMessageBox.information(self, f"Registro {resultado['registro_id']}", info)
-
+        QMessageBox.information(self, f"Registros con {texto} = {valor}", "\n\n".join(mensajes))
         self.mostrar_diagrama()
+

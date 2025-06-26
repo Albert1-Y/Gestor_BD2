@@ -25,7 +25,7 @@ class AVL:
             nodo.derecha = self._insertar(nodo.derecha, clave, fragmentos)
 
         nodo.altura = 1 + max(self._altura(nodo.izquierda),
-                              self._altura(nodo.derecha))
+                                self._altura(nodo.derecha))
 
         balance = self._balance(nodo)
 

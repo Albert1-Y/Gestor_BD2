@@ -1,3 +1,5 @@
+import datetime
+
 def inferir_tipo(valor):
     if isinstance(valor, bool):
         return 'bool'
@@ -36,22 +38,20 @@ def construir_avl_por_campo(disco, campo_tipo, campo_orden):
             
             if tipo == campo_tipo:
                 if isinstance(valor, str):
-                    if valor.isdigit():  # si la cadena es un numero entero
+                    if valor.isdigit():
                         valor = int(valor)
                     else:
                         try:
-                            # intentamos convertirlo a float
                             valor = float(valor)
                         except ValueError:
                             pass
-                
-                elif isinstance(valor, (int, float)):  # numerica
+                elif isinstance(valor, (int, float)):
                     pass
                 elif isinstance(valor, str):
                     pass
-                elif isinstance(valor, datetime):  # Si es fecha
+                elif isinstance(valor, datetime):
                     try:
-                        valor = datetime.strptime(valor, "%Y-%m-%d")  # de string a datetime
+                        valor = datetime.strptime(valor, "%Y-%m-%d")
                     except ValueError:
                         pass
                 else:
@@ -74,3 +74,32 @@ def reconstruir_contenido(fragmentos, disco):
             if campo["inicio"] >= ini and campo["fin"] <= fin:
                 resultado.append(f"{campo['valor']} ({campo['tipo']})")
     return " | ".join(resultado)
+
+def reconstruir_en_lista(fragmentos, disco):
+    resultado = []
+    for p, s, pi, se, ini, fin in fragmentos:
+        lba = disco._pps_a_lba(p, s, pi, se)
+        sector = disco.sectores[lba]
+        for campo in sector.campos:
+            if campo["inicio"] >= ini and campo["fin"] <= fin:
+                # Asegurarnos de que estamos extrayendo 'valor' correctamente
+                if campo["valor"]:  # Verificar si el valor no está vacío
+                    resultado.append({
+                        "valor": campo["valor"],
+                        "tipo": campo["tipo"],
+                        "inicio": campo["inicio"],
+                        "fin": campo["fin"]
+                    })
+                else:
+                    resultado.append({
+                        "valor": "N/A",  # Si el campo está vacío, colocar "N/A"
+                        "tipo": campo["tipo"],
+                        "inicio": campo["inicio"],
+                        "fin": campo["fin"]
+                    })
+    return resultado
+
+
+
+def extraer_valores(datos):
+    return [[item['valor'] for item in row] for row in datos]

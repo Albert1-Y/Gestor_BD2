@@ -13,7 +13,7 @@ class DISCOLBA:
         self.total_sectores = self.platos * self.sectores_por_plato
 
         self.sectores = [Sector(tamano_sector) for _ in range(self.total_sectores)]
-        self.indice_registros = {}  # {id_registro: {"campos": [...], "fragmentos": [...]}}
+        self.indice_registros = {}  # {id_registro: {"campos": [], "fragmentos": []}}
         self.nombres_campos = nombres_campos or []
 
     def _lba_a_pps(self, lba_index):

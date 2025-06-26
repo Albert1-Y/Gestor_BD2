@@ -6,7 +6,7 @@ class Sector:
     def espacio_libre(self):
         return self.capacidad - self.uso_memoria()
 
-    def uso_memoria(self):
+    def uso_memoria(self, string = 40):
         total = 0
         for campo in self.campos:
             if campo["tipo"] == "int":
@@ -21,6 +21,7 @@ class Sector:
                 total += 1
             elif campo["tipo"] == "string":
                 total += len(campo["valor"]) + 1
+                #total += string
         return total
 
     def agregar_campo(self, tipo, valor):

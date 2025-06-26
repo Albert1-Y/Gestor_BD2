@@ -82,24 +82,14 @@ def reconstruir_en_lista(fragmentos, disco):
         sector = disco.sectores[lba]
         for campo in sector.campos:
             if campo["inicio"] >= ini and campo["fin"] <= fin:
-                # Asegurarnos de que estamos extrayendo 'valor' correctamente
-                if campo["valor"]:  # Verificar si el valor no está vacío
+                if campo["valor"]:  # Solo agregar si tiene valor
                     resultado.append({
                         "valor": campo["valor"],
                         "tipo": campo["tipo"],
                         "inicio": campo["inicio"],
                         "fin": campo["fin"]
                     })
-                else:
-                    resultado.append({
-                        "valor": "N/A",  # Si el campo está vacío, colocar "N/A"
-                        "tipo": campo["tipo"],
-                        "inicio": campo["inicio"],
-                        "fin": campo["fin"]
-                    })
     return resultado
-
-
 
 def extraer_valores(datos):
     return [[item['valor'] for item in row] for row in datos]

@@ -21,7 +21,7 @@ class Sector:
                 total += 1
             elif campo["tipo"] == "string":
                 total += len(campo["valor"]) + 1
-                #total += string
+                
         return total
 
     def agregar_campo(self, tipo, valor):

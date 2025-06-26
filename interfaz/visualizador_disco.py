@@ -147,7 +147,6 @@ class DiscoInterfaz(QWidget):
             QMessageBox.warning(self, "Entrada vacía", "Ingrese un valor a buscar.")
             return
 
-        # inferir tipo del valor ingresado
         try:
             tipo_inferido = inferir_tipo(valor_str)
             if tipo_inferido == "int":
@@ -162,12 +161,10 @@ class DiscoInterfaz(QWidget):
             QMessageBox.warning(self, "Error de tipo", "No se pudo interpretar el valor ingresado.")
             return
 
-        # Campo seleccionado
         campo_idx = self.combo_campo.currentIndex()
         texto = self.combo_campo.currentText()
         campo_tipo = texto.split('(')[-1].strip(')')
 
-        # Construir AVL y buscar
         avl = construir_avl_por_campo(self.disco, campo_tipo, campo_idx)
         resultados = avl.buscar(valor)
 

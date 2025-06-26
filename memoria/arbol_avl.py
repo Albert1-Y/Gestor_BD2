@@ -1,7 +1,7 @@
 class NodoAVL:
     def __init__(self, clave, fragmentos):
         self.clave = clave
-        self.fragmentos = [fragmentos]  # lista de fragmentos asociados
+        self.fragmentos = [fragmentos]  
         self.izquierda = None
         self.derecha = None
         self.altura = 1

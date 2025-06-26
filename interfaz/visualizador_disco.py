@@ -137,6 +137,10 @@ class DiscoInterfaz(QWidget):
                 flecha = QGraphicsLineItem(cx + (pixmap.width() if not pixmap.isNull() else 200) / 2, cy, base_x, y)
                 flecha.setPen(QPen(Qt.GlobalColor.white, 2))
                 self.scene.addItem(flecha)
+<<<<<<< HEAD
+=======
+        self.registro_encontrado = None
+>>>>>>> 1eb37ea (Lectura de tabla .txt)
                 
     def buscar_registro(self):
         valor_str = self.input_busqueda.text().strip()

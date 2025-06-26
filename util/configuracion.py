@@ -12,15 +12,15 @@ class ConfigDialog(QDialog):
 
         self.pistas_input = QSpinBox()
         self.pistas_input.setRange(1, 100)
-        self.pistas_input.setValue(10)
+        self.pistas_input.setValue(5)
 
         self.sectores_input = QSpinBox()
         self.sectores_input.setRange(1, 100)
-        self.sectores_input.setValue(20)
+        self.sectores_input.setValue(10)
 
         self.tamano_sector_input = QSpinBox()
         self.tamano_sector_input.setRange(1, 1024)
-        self.tamano_sector_input.setValue(16)
+        self.tamano_sector_input.setValue(64)
 
         form_layout = QFormLayout()
         form_layout.addRow("Número de platos:", self.platos_input)
@@ -32,7 +32,7 @@ class ConfigDialog(QDialog):
         self.confirmar_btn.clicked.connect(self.accept)
 
         self.usar_default_btn = QPushButton("Usar valores por defecto")
-        self.usar_default_btn.clicked.connect(self.reject)
+        self.usar_default_btn.clicked.connect(self.accept)
 
         botones_layout = QHBoxLayout()
         botones_layout.addWidget(self.confirmar_btn)
@@ -51,5 +51,11 @@ class ConfigDialog(QDialog):
             "sectores": self.sectores_input.value(),
             "tamano": self.tamano_sector_input.value()
         }
+    
+    def valores(self):
+        return [self.platos_input.value(),
+                self.pistas_input.value(),
+                self.sectores_input.value(),
+                self.tamano_sector_input.value()]
 
 

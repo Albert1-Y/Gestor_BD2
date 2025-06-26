@@ -1,10 +1,11 @@
 import sys
 import os
 import csv
-from PyQt6.QtWidgets import QApplication
+from PyQt6.QtWidgets import QApplication, QDialog
 from disco.disco import DISCOLBA
 from interfaz.visualizador_disco import DiscoInterfaz
 from util.helpers import insertar_registro
+from util.configuracion import ConfigDialog
 
 def extraer_nombres_campos(ruta_archivo):
     with open(ruta_archivo, "r", encoding="utf-8") as archivo:
@@ -24,34 +25,46 @@ class DISCOLBA_Mod(DISCOLBA):
         super().__init__(*args, **kwargs)
         self.nombres_campos = nombres_campos or []
 
-def cargar_registros_desde_csv(ruta_archivo, platos=2, pistas=2, sectores=5, tamano_sector=64):
-    with open(ruta_archivo, mode="r", encoding="utf-8") as archivo:
-        lector = csv.reader(archivo)
-        filas = list(lector)
+def cargar_registros_desde_csv(ruta_archivo):
+    dialogo = ConfigDialog()
 
-    if not filas:
-        raise ValueError("El archivo CSV está vacío.")
+    if dialogo.exec() == QDialog.DialogCode.Accepted:
+        config = dialogo.get_valores()
 
-    nombres_campos = [campo.strip() for campo in filas[0]]
+        platos = config["platos"]
+        pistas = config["pistas"]
+        sectores = config["sectores"]
+        tamano_sector = config["tamano"]
 
-    disco = DISCOLBA_Mod(
-        platos=platos,
-        pistas=pistas,
-        sectores=sectores,
-        tamano_sector=tamano_sector,
-        nombres_campos=nombres_campos
-    )
+        with open(ruta_archivo, mode="r", encoding="utf-8") as archivo:
+            lector = csv.reader(archivo)
+            filas = list(lector)
 
-    for fila in filas[1:]:
-        valores = [valor.strip() for valor in fila]
-        if len(valores) != len(nombres_campos):
-            print(f"Saltando registro inválido: {fila}")
-            continue
-        id_registro = valores[0]
-        insertar_registro(disco, id_registro, valores)
+        if not filas:
+            raise ValueError("El archivo CSV está vacío.")
 
-    return disco
+        nombres_campos = [campo.strip() for campo in filas[0]]
 
+        disco = DISCOLBA_Mod(
+            platos=platos,
+            pistas=pistas,
+            sectores=sectores,
+            tamano_sector=tamano_sector,
+            nombres_campos=nombres_campos
+        )
+
+        for fila in filas[1:]:
+            valores = [valor.strip() for valor in fila]
+            if len(valores) != len(nombres_campos):
+                print(f"Saltando registro inválido: {fila}")
+                continue
+            id_registro = valores[0]
+            insertar_registro(disco, id_registro, valores)
+
+        return disco
+    else:
+        print("Configuración no confirmada por el usuario.")
+        return None
 
 def main():
     app = QApplication(sys.argv)
@@ -59,9 +72,10 @@ def main():
 
     disco = cargar_registros_desde_csv(ruta)
 
-    ventana = DiscoInterfaz(disco)
-    ventana.resize(1200, 800)
-    ventana.show()
+    if disco:
+        ventana = DiscoInterfaz(disco)
+        ventana.resize(1200, 800)
+        ventana.show()
 
     sys.exit(app.exec())
 

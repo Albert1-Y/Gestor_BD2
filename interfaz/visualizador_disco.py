@@ -2,13 +2,14 @@ import os
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QComboBox, QSpinBox, QLineEdit,
     QPushButton, QLabel, QMessageBox, QGraphicsScene, QGraphicsView,
-    QGraphicsRectItem, QGraphicsTextItem, QGraphicsLineItem, QGraphicsPixmapItem
+    QGraphicsRectItem, QGraphicsTextItem, QGraphicsLineItem, QGraphicsPixmapItem, QApplication
 )
 from PyQt6.QtGui import QColor, QBrush, QPen, QPixmap
 from PyQt6.QtCore import Qt
 from memoria.arbol_avl import AVL
-from util.helpers import reconstruir_contenido, construir_avl_por_campo, inferir_tipo, reconstruir_en_lista
+from util.helpers import reconstruir_contenido, construir_avl_por_campo, inferir_tipo, reconstruir_en_lista, extraer_valores
 
+from interfaz.ventana_resultados import TablaDialog
 
 class DiscoInterfaz(QWidget):
     def __init__(self, disco):
@@ -45,7 +46,6 @@ class DiscoInterfaz(QWidget):
         self.boton_buscar = QPushButton("Buscar")
         self.boton_buscar.clicked.connect(self.buscar_registro)
 
-        self.combo_campo = QComboBox()
         self.combo_campo = QComboBox()
         if disco.indice_registros:
             ejemplo_id = next(iter(disco.indice_registros))
@@ -138,14 +138,14 @@ class DiscoInterfaz(QWidget):
                 flecha.setPen(QPen(Qt.GlobalColor.white, 2))
                 self.scene.addItem(flecha)
         self.registro_encontrado = None
-                
+
     def buscar_registro(self):
         valor_str = self.input_busqueda.text().strip()
         if not valor_str:
             QMessageBox.warning(self, "Entrada vacía", "Ingrese un valor a buscar.")
             return
 
-        # Inferir tipo del valor ingresado
+        # inferir tipo del valor ingresado
         try:
             tipo_inferido = inferir_tipo(valor_str)
             if tipo_inferido == "int":
@@ -176,9 +176,11 @@ class DiscoInterfaz(QWidget):
             return
 
         mensajes = []
+        busqueda = []
+        
         for resultado in resultados:
-            contenido = reconstruir_contenido(sorted(resultado["fragmentos"], key=lambda f: (f[0], f[1], f[2], f[3], f[4])), self.disco)
-            contenido_lista = reconstruir_en_lista(sorted(resultado["fragmentos"], key=lambda f: (f[0], f[1], f[2], f[3], f[4])), self.disco)
+            contenido = reconstruir_contenido(resultado["fragmentos"], self.disco)
+            contenido_lista = reconstruir_en_lista(resultado["fragmentos"], self.disco)
             ubicaciones = []
             for frag in resultado["fragmentos"]:
                 lba = self.disco._pps_a_lba(*frag[:4])
@@ -194,7 +196,13 @@ class DiscoInterfaz(QWidget):
                 plato, sup, pista, sector = self.disco._lba_a_pps(lba)
                 msg += f"  Plato {plato}, Sup {sup}, Pista {pista}, Sector {sector} (bytes {ini}-{fin})\n"
             mensajes.append(msg)
-            print (contenido_lista)
+            busqueda.append(contenido_lista)
+        
+        print(busqueda)
+        print(extraer_valores(busqueda))
+        print(self.disco.nombres_campos)
 
+        dialog = TablaDialog(extraer_valores(busqueda), self.disco.nombres_campos)
+        dialog.exec()
         QMessageBox.information(self, f"Registros con {texto} = {valor}", "\n\n".join(mensajes))
         self.mostrar_diagrama()

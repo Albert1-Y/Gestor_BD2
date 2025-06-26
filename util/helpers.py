@@ -99,3 +99,9 @@ def reconstruir_en_lista(fragmentos, disco):
                         "fin": campo["fin"]
                     })
     return resultado
+
+
+
+def extraer_valores(datos):
+    return [[item['valor'] for item in row] for row in datos]
+

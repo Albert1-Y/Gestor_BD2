@@ -1,17 +1,63 @@
 import sys
+import os
+import csv
 from PyQt6.QtWidgets import QApplication
 from disco.disco import DISCOLBA
 from interfaz.visualizador_disco import DiscoInterfaz
 from util.helpers import insertar_registro
 
+def extraer_nombres_campos(ruta_archivo):
+    with open(ruta_archivo, "r", encoding="utf-8") as archivo:
+        lineas = archivo.readlines()
+
+    campos = []
+    for linea in lineas:
+        linea = linea.strip().rstrip(",")
+        if "(" in linea or ")" in linea or linea.upper().startswith("CREATE TABLE"):
+            continue
+        nombre_campo = linea.split()[0]
+        campos.append(nombre_campo)
+    return campos
+
+class DISCOLBA_Mod(DISCOLBA):
+    def __init__(self, *args, nombres_campos=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.nombres_campos = nombres_campos or []
+
+def cargar_registros_desde_csv(ruta_archivo, platos=2, pistas=2, sectores=5, tamano_sector=64):
+    with open(ruta_archivo, mode="r", encoding="utf-8") as archivo:
+        lector = csv.reader(archivo)
+        filas = list(lector)
+
+    if not filas:
+        raise ValueError("El archivo CSV está vacío.")
+
+    nombres_campos = [campo.strip() for campo in filas[0]]
+
+    disco = DISCOLBA_Mod(
+        platos=platos,
+        pistas=pistas,
+        sectores=sectores,
+        tamano_sector=tamano_sector,
+        nombres_campos=nombres_campos
+    )
+
+    for fila in filas[1:]:
+        valores = [valor.strip() for valor in fila]
+        if len(valores) != len(nombres_campos):
+            print(f"Saltando registro inválido: {fila}")
+            continue
+        id_registro = valores[0]
+        insertar_registro(disco, id_registro, valores)
+
+    return disco
+
+
 def main():
     app = QApplication(sys.argv)
-    nombres = ["id", "nombre", "edad"]
-    disco = DISCOLBA(platos=2, pistas=10, sectores=5, tamano_sector=10, nombres_campos=nombres)
+    ruta = "producto.csv"
 
-    insertar_registro(disco, "101", ['101', 'Ricardo', 20])
-    insertar_registro(disco, "102", ['102', 'Juanito', 30])
-    insertar_registro(disco, "103", ['103', 'Alvaro', 20])
+    disco = cargar_registros_desde_csv(ruta)
 
     ventana = DiscoInterfaz(disco)
     ventana.resize(1200, 800)
